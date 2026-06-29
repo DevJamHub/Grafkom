@@ -421,7 +421,7 @@ void DrawStartMenu(HDC dc) {
     TextAt(dc, avr, "SN", 14, true, COL_TXT, DT_CENTER|DT_VCENTER|DT_SINGLELINE);
 
     RECT nm = { mx + pad + av + 12, bbTop, mx + mw - 80, my + mh };
-    TextAt(dc, nm, "Sigit Novriyanto", 14, false, COL_TXT,
+    TextAt(dc, nm, "Kelompok", 14, false, COL_TXT,
            DT_LEFT|DT_VCENTER|DT_SINGLELINE);
 
     DrawPower(dc, mx + mw - pad - 14, bbTop + bbH / 2, RGB(220, 220, 220));
