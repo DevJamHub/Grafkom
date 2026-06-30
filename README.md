@@ -1,66 +1,136 @@
-# Final Project Grafika Komputer — Tiruan Start Menu (BGI / graphics.h)
+# Final Project Grafika Komputer — Simulasi Desktop & Start Menu Windows 11
 
-Program ini membuat **tiruan Start Menu Windows** menggunakan **hanya primitif
-grafis** dari pustaka **BGI** (`graphics.h`). Seluruh elemen antarmuka
-(taskbar, tombol start, panel menu, ikon, tombol X) **digambar sendiri** dari
-titik, garis, kotak, dan teks — tanpa widget GUI bawaan apa pun.
+Program ini membuat **tiruan desktop + Start Menu Windows 11** menggunakan
+**hanya primitif grafis GDI** dari Win32 (`windows.h`, `gdi32`, `user32`).
+Seluruh elemen antarmuka — taskbar, tombol start, panel menu, search box,
+folder, jendela aplikasi, ikon desktop, context menu, tombol X — **digambar
+sendiri** dari titik, garis, kotak (rounded), gradien, dan teks. **Tidak ada**
+widget GUI bawaan (`BUTTON`, `EDIT`, `MENU`, dll); Win32 dipakai hanya untuk
+satu window kanvas + event mouse/keyboard/timer. *Hit-testing* dilakukan manual
+dengan `PtInRect()`.
 
-## Kontrol (sesuai instruksi tugas)
-| Elemen          | Lokasi             | Aksi saat diklik              |
-|-----------------|--------------------|-------------------------------|
-| Tombol Start    | kiri bawah taskbar | Buka/tutup menu (toggle)      |
-| Tombol Keluar X | pojok kanan atas   | Menutup program               |
-| Ikon aplikasi   | dalam panel menu   | Tidak ada (tampilan saja)     |
+> File sumber: **`startmenu.cpp`** — kompatibel C++98 / GCC 4.4.1.
+
+---
+
+## Fitur Interaktif
+
+1. **Start Menu** — grid aplikasi *pinned* + daftar *Recommended* + bar profil.
+2. **Folder** — 3 tile pertama adalah folder (digambar mini-grid 2×2: *Office*,
+   *Dev Tools*, *Media*). Diklik → terbuka jadi jendela explorer berisi aplikasi.
+3. **Window Manager** — jendela aplikasi bisa **digeser** (drag title bar),
+   **ditutup** (tombol X per window), punya **z-order** (yang diklik naik ke
+   depan), dan bisa terbuka banyak sekaligus secara *cascade* (maks. 8 window).
+4. **Notepad** — jendela yang benar-benar bisa **diketik**; input keyboard
+   di-*route* manual ke window yang sedang fokus, lengkap dengan caret berkedip.
+5. **Live Search** — saat Start Menu terbuka, ketik langsung untuk memfilter
+   tile *pinned* secara real-time (pencarian *case-insensitive*).
+6. **Ikon Desktop** — klik = *select*, **double-click** = buka window.
+7. **Context Menu** — klik kanan area kosong → menu (Tampilan, Urutkan menurut,
+   Refresh, **Folder baru** menambah ikon folder di desktop, Personalisasi).
+8. **Jam live + caret blink** — diperbarui via `WM_TIMER`.
+
+---
+
+## Kontrol
+
+| Elemen                     | Lokasi                  | Aksi                                            |
+|----------------------------|-------------------------|-------------------------------------------------|
+| Tombol Start (logo Windows)| kiri taskbar            | Buka/tutup Start Menu (toggle)                  |
+| Ikon Search (kaca pembesar)| taskbar                 | Buka/tutup Start Menu                           |
+| Search box                 | dalam Start Menu        | Ketik → filter tile pinned real-time            |
+| Tile folder                | grid Start Menu         | Buka jendela explorer folder                    |
+| Tile aplikasi              | grid Start Menu         | Buka jendela aplikasi                           |
+| Item *Recommended*         | bawah Start Menu        | Buka file (mis. `Final Project.cpp` → notepad)  |
+| Title bar window           | atas tiap jendela       | **Drag** untuk menggeser window                 |
+| Tombol X window            | pojok kanan title bar   | Tutup window tersebut                           |
+| Ikon desktop               | area desktop            | Klik = select · **double-click** = buka         |
+| Klik kanan                 | area kosong desktop     | Tampilkan context menu                          |
+| Tombol X (merah)           | pojok kanan atas layar  | Keluar program                                  |
+| **ESC**                    | —                       | Tutup ctx → tutup window teratas → tutup menu → keluar |
 
 ---
 
 ## Cara Kompilasi & Menjalankan
 
-Program memakai `graphics.h`. Pilih **salah satu** lingkungan berikut.
+Program memakai **GDI murni** (sudah tersedia di setiap toolchain Windows),
+jadi **tidak perlu** memasang pustaka pihak ketiga seperti WinBGIm/SDL_bgi.
 
-### A. Dev-C++ + WinBGIm (paling umum, Windows) — DIREKOMENDASIKAN
-1. Pasang **Dev-C++** (mis. versi Embarcadero/Bloodshed).
-2. Pasang paket WinBGIm: salin `graphics.h` dan `winbgim.h` ke folder
-   `include`, serta `libbgi.a` ke folder `lib` dari kompiler Dev-C++.
-3. Buka `start_menu.cpp`, lalu masuk menu
-   **Project → Project Options → Parameters → Linker** dan tambahkan:
-   ```
-   -lbgi -lgdi32 -lcomdlg32 -luuid -loleaut32 -lole32
-   ```
-4. Tekan **F11** (Compile & Run).
+### A. MinGW / g++ (direkomendasikan)
 
-### B. Code::Blocks + WinBGIm (Windows)
-1. Salin `graphics.h`, `winbgim.h` ke folder `include` MinGW, dan `libbgi.a`
-   ke folder `lib`.
-2. **Settings → Compiler → Linker settings**, tambahkan pustaka:
-   `bgi, gdi32, comdlg32, uuid, oleaut32, ole32` (urutan penting, `bgi` paling atas).
-3. Build & Run.
-
-### C. SDL_bgi (lintas platform: Windows/Linux/Mac)
-Bila tidak memakai WinBGIm, gunakan SDL_bgi yang menyediakan `graphics.h`
-identik di atas SDL2.
 ```bash
-# contoh di Linux setelah SDL2 dev + SDL_bgi terpasang:
-g++ start_menu.cpp -o start_menu -lSDL_bgi -lSDL2
-./start_menu
+g++ startmenu.cpp -o startmenu.exe -mwindows -lgdi32 -luser32
+startmenu.exe
 ```
 
-> **Catatan penting:** fungsi `COLOR(r,g,b)` untuk warna RGB kustom tersedia
-> di **WinBGIm** dan **SDL_bgi** (bukan di Turbo C BGI lama). Bila kompiler
-> menolak `COLOR`, ganti dengan 16 warna baku BGI (BLACK, BLUE, GREEN, CYAN,
-> RED, ..., WHITE).
+- `-mwindows` → aplikasi GUI (tanpa jendela konsol hitam).
+- `-lgdi32 -luser32` → tautkan pustaka GDI & User32.
+
+### B. MSVC (Developer Command Prompt)
+
+```bat
+cl startmenu.cpp user32.lib gdi32.lib
+startmenu.exe
+```
+
+### C. Dev-C++ / Code::Blocks
+
+1. Buka `startmenu.cpp` sebagai project baru (Win32 GUI Application).
+2. Pastikan linker menautkan `gdi32` dan `user32` (umumnya sudah default pada
+   template *Windows Application*; bila belum, tambahkan `-lgdi32 -luser32`).
+3. Build & Run.
+
+> **Catatan kompatibilitas:** kode ditulis untuk C++98 / GCC 4.4.1, jadi tidak
+> memakai `nullptr`, *range-based for*, maupun *brace-init* non-POD. Untuk
+> kualitas font dipakai `ANTIALIASED_QUALITY` (bukan `CLEARTYPE_QUALITY`) agar
+> aman di kompiler lama.
 
 ---
 
 ## Ringkasan Isi Kode
-- `gambarDesktop()`  — latar gradien (interpolasi warna per baris piksel).
-- `gambarTaskbar()`  — bilah tugas bawah.
-- `gambarTombolStart()` — tombol start + logo 4 kotak.
-- `gambarStartMenu()` — panel menu: avatar, daftar aplikasi (tampilan saja).
-- `gambarTombolKeluar()` — tombol X (kotak merah + dua garis silang).
-- `didalam()` — *hit-testing* manual: cek apakah klik berada di area tombol.
-- `main()` — *event loop*: tangani klik mouse, perbarui state, gambar ulang.
+
+**Data & inisialisasi**
+- `InitApps()`, `InitRecs()`, `InitFolders()`, `InitPinned()`, `InitDesk()` —
+  mengisi data aplikasi, item *Recommended*, folder, grid *pinned*, dan ikon
+  desktop (dipisah jadi fungsi agar kompatibel GCC 4.4.1).
+
+**Primitif & utilitas gambar**
+- `GradientV()` / `BuildBackground()` — latar gradien (interpolasi per baris).
+- `RoundFill()` — kotak sudut membulat (dasar hampir semua panel/tombol).
+- `DrawWinLogo()`, `DrawMagnifier()`, `DrawPower()`, `DrawX()` — ikon vektor.
+- `TextAt()`, `MakeFont()` — render teks + font.
+
+**Taskbar & Start Menu**
+- `DrawTaskbar()` — bilah tugas: start, search, tray, **jam live**.
+- `DrawStartMenu()` + `DrawStartBottomBar()` — panel menu + bar profil
+  (avatar "SN" / "Sigit Novriyanto").
+- `DrawAppTile()` / `DrawFolderTile()` — tile aplikasi & folder (mini-grid 2×2).
+
+**Window Manager**
+- `OpenWindow()`, `CloseWindow()`, `FocusWindow()`, `WindowAt()` — kelola
+  jendela: buka/tutup, fokus, z-order (depan = elemen terakhir), maks. `MAXWIN`.
+- `DrawWindow()`, `WinCloseRc()`, `FolderCellRc()` — gambar jendela + tombol X +
+  sel folder.
+
+**Desktop & Context Menu**
+- `DrawDesktopIcons()`, `AddDesk()`, `OpenDesk()` — ikon desktop + aksinya.
+- `DrawContextMenu()`, `CtxItemName()`, `CtxItemAt()`, `DoCtxAction()` — menu
+  klik kanan.
+
+**Interaksi & event loop**
+- `RecomputeLayout()` — hitung ulang posisi semua elemen (mengikuti resolusi
+  layar), dipakai bersama oleh penggambar & *hit-test* agar selalu sinkron.
+- `BuildMatches()`, `ContainsCI()`, `PinnedAt()`, `SearchRowRc()` — live search
+  & hit-test grid.
+- `ToggleMenu()` — buka/tutup Start Menu.
+- `Render()` — *double buffering* (anti kedip).
+- `WndProc()` — tangani `WM_PAINT`, mouse (`WM_LBUTTON*`, `WM_RBUTTONDOWN`,
+  `WM_MOUSEMOVE`), keyboard (`WM_CHAR`, `WM_KEYDOWN`), dan `WM_TIMER`.
+- `WinMain()` — *entry point*: daftar window class (dengan `CS_DBLCLKS`),
+  bikin kanvas *full-screen*, jalankan message loop.
+
+---
 
 ## File
-- `start_menu.cpp` — kode sumber lengkap (berkomentar Bahasa Indonesia).
-- `pratinjau_tampilan.png` — ilustrasi tampilan akhir (mock-up).
+
+- `startmenu.cpp` — kode sumber lengkap (komentar Bahasa Indonesia).
